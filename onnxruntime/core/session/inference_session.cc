@@ -1425,6 +1425,13 @@ common::Status InferenceSession::TransformGraph(onnxruntime::Graph& graph, bool 
   ORT_RETURN_IF_ERROR_SESSIONID_(graph_transformer_mgr_.ApplyTransformers(graph, TransformerLevel::Default, *session_logger_));
   ORT_RETURN_IF_ERROR_SESSIONID_(graph_transformer_mgr_.ApplyTransformers(graph, TransformerLevel::Level1, *session_logger_));
 
+  // If free dimension overrides were applied, re-run shape inference so that
+  // EPs see fully-resolved static shapes on intermediate nodes, not just on
+  // graph inputs.
+  if (!session_options_.free_dimension_overrides.empty()) {
+    ORT_RETURN_IF_ERROR_SESSIONID_(graph.Resolve());
+  }
+
   // if saving model to ORT format we only assign nodes a custom EP can handle and don't compile them.
   // we do this to preserve the original nodes in the model but prevent optimizers from changing them.
   // at runtime, the ORT format model will re-do the partitioning/compilation of these nodes, which may change
